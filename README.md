@@ -71,15 +71,20 @@ CREATE TABLE fuel_logs (
 ```
 ### 3. Backend Setup
 Navigate to the backend directory, install dependencies, and start the server:
+```
 cd backend
 npm install
+```
 # Create a .env file (see Environment Variables section below)
+```
 npm run dev
+```
 
 ### 4. Frontend Setup
 Navigate to the frontend directory, install dependencies, and start the Vite dev server:
+```
 cd frontend
 npm install
 npm run dev
-
+```
 The app will be running at http://localhost:5173.
