@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function OperationalAnalytics() {
@@ -110,12 +112,54 @@ export default function OperationalAnalytics() {
     return `Rs. ${val}`;
   };
 
+  // --- EXPORT LOGIC ---
+  const exportToPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.text("FleetFlow: Financial Summary Report", 14, 22);
+    
+    const tableColumn = ["Month", "Revenue", "Fuel Cost", "Maintenance", "Net Profit"];
+    const tableRows = monthlyData.map(data => [
+      data.name,
+      formatCurrency(data.revenue),
+      formatCurrency(data.fuelCost),
+      formatCurrency(data.maintenance),
+      formatCurrency(data.netProfit)
+    ]);
+    
+    autoTable(doc, { head: [tableColumn], body: tableRows, startY: 40, theme: 'grid' });
+    doc.save("FleetFlow_Financial_Report.pdf");
+  };
+
+  const exportToCSV = () => {
+    let csv = "Month,Revenue,Fuel Cost,Maintenance,Net Profit\n";
+    monthlyData.forEach(data => { 
+      // Using raw numbers for CSV so it can be easily summed in Excel
+      csv += `${data.name},${data.revenue},${data.fuelCost},${data.maintenance},${data.netProfit}\n`; 
+    });
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "FleetFlow_Financial_Report.csv";
+    link.click();
+  };
+
   const cardStyle = { flex: 1, border: '2px solid #10b981', borderRadius: '12px', padding: '24px', background: '#0a111c', textAlign: 'center' };
   const chartCardStyle = { flex: 1, background: '#e0e1dd', padding: '20px', borderRadius: '4px', color: '#050b14' };
+  const exportBtnStyle = { padding: '10px 15px', cursor: 'pointer', border: 'none', borderRadius: '4px', fontWeight: 'bold' };
 
   return (
     <div style={{ color: '#e0e1dd' }}>
-      <h2 style={{ color: '#00a8e8', marginBottom: '30px', fontWeight: '400' }}>8. Operational Analytics & Financial Reports</h2>
+      
+      {/* HEADER WITH EXPORT BUTTONS */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+        <h2 style={{ color: '#00a8e8', margin: 0, fontWeight: '400' }}>8. Operational Analytics & Financial Reports</h2>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={exportToCSV} style={{ ...exportBtnStyle, background: '#0077b6', color: '#fff' }}>Export CSV</button>
+          <button onClick={exportToPDF} style={{ ...exportBtnStyle, background: '#ef4444', color: '#fff' }}>Export PDF</button>
+        </div>
+      </div>
 
       {/* --- TOP KPIs (Green Outline) --- */}
       <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
