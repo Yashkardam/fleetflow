@@ -7,19 +7,22 @@ import TripDispatcher from './pages/TripDispatcher';
 import MaintenanceLogs from './pages/MaintenanceLogs';
 import TripAndFuelLogging from './pages/TripAndFuelLogging';
 import OperationalAnalytics from './pages/OperationalAnalytics';
+import CommandCenter from './pages/CommandCenter';
 
 function Sidebar({ role, onLogout }) {
   const location = useLocation();
   
   // ROLE-BASED ACCESS CONTROL (RBAC): Determine which links this role can see
-  const allLinks = [
-    { path: '/', label: 'Dashboard', roles: ['Manager'] }, // Manager only
-    { path: '/dispatch', label: 'Trip Dispatcher', roles: ['Manager', 'Dispatcher'] }, // Both
-    { path: '/vehicles', label: 'Vehicle Registry', roles: ['Manager', 'Dispatcher'] }, // Both
-    { path: '/drivers', label: 'Driver Profiles', roles: ['Manager', 'Dispatcher'] }, // Both (Dispatchers need to see who is on duty)
-    { path: '/maintenance', label: 'Service Logs', roles: ['Manager'] }, // Manager only
-    { path: '/fuel-and-completion', label: 'Trip Logs & Fuel', roles: ['Manager', 'Dispatcher'] } // Both (Dispatchers complete trips, Managers log fuel)
-  ];
+const allLinks = [
+  { path: '/', label: 'Command Center', roles: ['Manager', 'Dispatcher'] },
+  { path: '/dispatch', label: 'Trip Dispatcher', roles: ['Manager', 'Dispatcher'] },
+  { path: '/vehicles', label: 'Vehicle Registry', roles: ['Manager', 'Dispatcher'] },
+  { path: '/drivers', label: 'Driver Profiles', roles: ['Manager', 'Dispatcher'] },
+  { path: '/maintenance', label: 'Service Logs', roles: ['Manager'] },
+  { path: '/fuel-and-completion', label: 'Trip Logs & Fuel', roles: ['Manager', 'Dispatcher'] },
+  { path: '/analytics', label: 'Operational Analytics & Financial Reports', roles: ['Manager'] },
+
+];
 
   // Filter links based on the user's role
   const visibleLinks = allLinks.filter(link => link.roles.includes(role));
@@ -31,7 +34,7 @@ function Sidebar({ role, onLogout }) {
       
       <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '15px', flex: 1 }}>
         {visibleLinks.map(link => {
-          const isActive = location.pathname === link.path || (link.path === '/' && location.pathname === '/analytics');
+          const isActive = location.pathname === link.path || (link.path === '/' && location.pathname === '/');
           return (
             <li key={link.path}>
               <Link to={link.path} style={{ 
@@ -72,8 +75,16 @@ export default function App() {
   };
 
   // If not authenticated, ONLY render the Login page
+// If not authenticated, wrap the Login component in the Router 
+  // so it can read the ?token= from the email link!
   if (!auth.isAuthenticated) {
-    return <Login setAuth={setAuth} />;
+    return (
+      <Router>
+        <Routes>
+          <Route path="*" element={<Login setAuth={setAuth} />} />
+        </Routes>
+      </Router>
+    );
   }
 
   // If authenticated, render the full app structure
@@ -83,12 +94,13 @@ export default function App() {
         <Sidebar role={auth.role} onLogout={handleLogout} />
         <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
           <Routes>
-            <Route path="/" element={auth.role === 'Dispatcher' ? <Navigate to="/dispatch" /> : <OperationalAnalytics />} />
+            <Route path="/" element={auth.role === 'Dispatcher' ? <Navigate to="/dispatch" /> : <CommandCenter />} />
             <Route path="/vehicles" element={<VehicleRegistry />} />
             <Route path="/drivers" element={<DriverProfiles />} />
             <Route path="/dispatch" element={<TripDispatcher />} />
             <Route path="/maintenance" element={<MaintenanceLogs />} />
             <Route path="/fuel-and-completion" element={<TripAndFuelLogging />} />
+            <Route path="/analytics" element={auth.role === 'Dispatcher' ? <Navigate to="/dispatch" /> : <OperationalAnalytics />} />
             {/* Add this as the very last Route in your App.jsx */}
             <Route path="*" element={
               <div style={{ textAlign: 'center', marginTop: '100px', color: '#8d99ae' }}>

@@ -5,88 +5,175 @@ export default function TripDispatcher() {
   const [trips, setTrips] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
-  const [formData, setFormData] = useState({ vehicle_id: '', driver_id: '', cargo_weight: '' });
+  
+  // Search & Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [sortBy, setSortBy] = useState('Newest');
+
+  // Form State matching the Excalidraw Mockup
+  const [formData, setFormData] = useState({ 
+    vehicle_id: '', 
+    driver_id: '', 
+    cargo_weight: '', 
+    origin_address: '', 
+    destination_address: '', 
+    estimated_fuel_cost: '' 
+  });
   const [errorMessage, setErrorMessage] = useState('');
 
   const fetchData = async () => {
-    const [tripsRes, vehiclesRes, driversRes] = await Promise.all([
-      axios.get('http://localhost:5000/api/trips'),
-      axios.get('http://localhost:5000/api/vehicles'),
-      axios.get('http://localhost:5000/api/drivers')
-    ]);
-    setTrips(tripsRes.data); setVehicles(vehiclesRes.data); setDrivers(driversRes.data);
+    try {
+      const [tripsRes, vehiclesRes, driversRes] = await Promise.all([
+        axios.get('http://localhost:5000/api/trips'),
+        axios.get('http://localhost:5000/api/vehicles'),
+        axios.get('http://localhost:5000/api/drivers')
+      ]);
+      setTrips(tripsRes.data); 
+      setVehicles(vehiclesRes.data); 
+      setDrivers(driversRes.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setErrorMessage('');
+  const handleSubmit = async (e, targetStatus) => {
+    e.preventDefault(); 
+    setErrorMessage('');
     try {
-      await axios.post('http://localhost:5000/api/trips', formData);
-      setFormData({ vehicle_id: '', driver_id: '', cargo_weight: '' });
+      await axios.post('http://localhost:5000/api/trips', { ...formData, status: targetStatus });
+      setFormData({ 
+        vehicle_id: '', driver_id: '', cargo_weight: '', 
+        origin_address: '', destination_address: '', estimated_fuel_cost: '' 
+      });
       fetchData();
     } catch (error) {
-      setErrorMessage(error.response?.data?.error || "An unexpected error occurred.");
+      setErrorMessage(error.response?.data?.error || "Check cargo weight vs vehicle capacity.");
     }
   };
 
-  // --- THEME STYLES ---
-  const inputStyle = { background: '#050b14', color: '#fff', border: '1px solid #1b4965', padding: '12px', borderRadius: '4px', outline: 'none', flex: 1 };
-  const btnStyle = { background: '#0077b6', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' };
+  // Logic for filtering and searching trips
+  const processedTrips = trips.filter(t => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = 
+      t.vehicle_name?.toLowerCase().includes(query) || 
+      t.origin_address?.toLowerCase().includes(query) ||
+      t.destination_address?.toLowerCase().includes(query);
+    const matchesStatus = filterStatus === 'All' || t.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Common Styles
+  const inputStyle = { background: '#050b14', color: '#fff', border: '1px solid #1b4965', padding: '10px', borderRadius: '4px', outline: 'none', flex: 1 };
+  const labelStyle = { width: '180px', color: '#e0e1dd', fontSize: '14px' };
 
   return (
-    <div>
-      <h2 style={{ color: '#e0e1dd', marginBottom: '30px', fontWeight: '400' }}>Trip Dispatcher</h2>
-      
-      <div style={{ background: '#0a111c', border: '1px solid #1b4965', padding: '24px', borderRadius: '8px', marginBottom: '30px' }}>
-        <h3 style={{ color: '#00a8e8', marginTop: 0, marginBottom: '20px' }}>Create New Trip</h3>
-        
-        {errorMessage && <div style={{ padding: '12px', marginBottom: '20px', background: '#450a0a', border: '1px solid #7f1d1d', color: '#fca5a5', borderRadius: '4px' }}>{errorMessage}</div>}
+    <div style={{ width: '100%' }}>
+      <h2 style={{ color: '#00a8e8', marginBottom: '20px' }}>Trip Dispatcher & Management</h2>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-          <select required value={formData.vehicle_id} onChange={(e) => setFormData({...formData, vehicle_id: e.target.value})} style={inputStyle}>
-            <option value="" style={{ color: '#888' }}>-- Select Vehicle --</option>
-            {vehicles.filter(v => v.status === 'Available').map(v => (
-              <option key={v.id} value={v.id}>{v.name} (Max: {v.max_capacity_kg}kg)</option>
-            ))}
-          </select>
-
-          <select required value={formData.driver_id} onChange={(e) => setFormData({...formData, driver_id: e.target.value})} style={inputStyle}>
-            <option value="">-- Select Driver --</option>
-            {drivers.filter(d => d.status === 'On Duty').map(d => (
-              <option key={d.id} value={d.id}>{d.name}</option>
-            ))}
-          </select>
-
-          <input type="number" placeholder="Cargo Weight (kg)" required min="1" value={formData.cargo_weight} onChange={(e) => setFormData({...formData, cargo_weight: e.target.value})} style={inputStyle} />
-          <button type="submit" style={btnStyle}>Dispatch Trip</button>
-        </form>
+      {/* --- TOP: SEARCH & FILTERS --- */}
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', background: '#0a111c', padding: '15px', borderRadius: '8px', border: '1px solid #1b4965' }}>
+        <input 
+          type="text" placeholder="Search by vehicle, origin, or destination..." 
+          value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} 
+          style={{ ...inputStyle, flex: 3 }} 
+        />
+        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={inputStyle}>
+          <option value="All">All Statuses</option>
+          <option value="Dispatched">Dispatched</option>
+          <option value="Draft">Draft</option>
+          <option value="Completed">Completed</option>
+        </select>
       </div>
 
-      <div style={{ background: '#0a111c', border: '1px solid #1b4965', borderRadius: '8px', overflow: 'hidden' }}>
+      {/* --- MIDDLE: TRIP TABLE --- */}
+      <div style={{ background: '#0a111c', border: '1px solid #1b4965', borderRadius: '8px', overflow: 'hidden', marginBottom: '30px' }}>
         <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#023e8a', color: '#fff' }}>
-              <th style={{ padding: '16px' }}>Trip ID</th><th>Vehicle</th><th>Driver</th><th>Cargo (kg)</th><th>Status</th><th>Date</th>
+          <thead style={{ background: '#1b4965', color: '#fff' }}>
+            <tr>
+              <th style={{ padding: '12px 16px' }}>Trip ID</th>
+              <th>Vehicle</th>
+              <th>Origin</th>
+              <th>Destination</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {trips.map((t) => (
-              <tr key={t.id} style={{ borderBottom: '1px solid #1b4965' }}>
-                <td style={{ padding: '16px' }}>{t.id}</td>
+            {processedTrips.map((t) => (
+              <tr key={t.id} style={{ borderBottom: '1px solid #1b4965', color: '#e0e1dd' }}>
+                <td style={{ padding: '12px 16px' }}>{t.id}</td>
                 <td>{t.vehicle_name}</td>
-                <td>{t.driver_name}</td>
-                <td>{t.cargo_weight}</td>
+                <td>{t.origin_address}</td>
+                <td>{t.destination_address}</td>
                 <td>
-                  <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', background: t.status === 'Dispatched' ? '#0077b6' : '#1b4965', color: '#fff' }}>
-                    {t.status}
-                  </span>
+                  <span style={{ 
+                    padding: '4px 10px', borderRadius: '12px', fontSize: '11px', 
+                    background: t.status === 'Dispatched' ? '#00a8e8' : '#f59e0b', 
+                    color: '#fff' 
+                  }}>{t.status}</span>
                 </td>
-                <td>{new Date(t.created_at).toLocaleString()}</td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* --- BOTTOM: NEW TRIP FORM (Green Outline) --- */}
+      <div style={{ background: '#0a111c', border: '1px solid #10b981', padding: '24px', borderRadius: '8px' }}>
+        <h3 style={{ color: '#10b981', marginTop: 0, marginBottom: '20px' }}>New Trip Form</h3>
+        
+        {errorMessage && <p style={{ color: '#ef4444' }}>{errorMessage}</p>}
+
+        <form>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={labelStyle}>Select Vehicle:</label>
+              <select style={inputStyle} value={formData.vehicle_id} onChange={e => setFormData({...formData, vehicle_id: e.target.value})}>
+                <option value="">-- Select --</option>
+                {vehicles.filter(v => v.status === 'Available').map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={labelStyle}>Cargo Weight (kg):</label>
+              <input type="number" style={inputStyle} value={formData.cargo_weight} onChange={e => setFormData({...formData, cargo_weight: e.target.value})} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={labelStyle}>Select Driver:</label>
+              <select style={inputStyle} value={formData.driver_id} onChange={e => setFormData({...formData, driver_id: e.target.value})}>
+                <option value="">-- Select --</option>
+                {drivers.filter(d => d.status === 'On Duty').map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={labelStyle}>Origin Address:</label>
+              <input type="text" style={inputStyle} value={formData.origin_address} onChange={e => setFormData({...formData, origin_address: e.target.value})} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={labelStyle}>Destination:</label>
+              <input type="text" style={inputStyle} value={formData.destination_address} onChange={e => setFormData({...formData, destination_address: e.target.value})} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <label style={labelStyle}>Estimated Fuel Cost:</label>
+              <input type="number" style={inputStyle} value={formData.estimated_fuel_cost} onChange={e => setFormData({...formData, estimated_fuel_cost: e.target.value})} />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '20px', display: 'flex', gap: '15px' }}>
+            <button onClick={(e) => handleSubmit(e, 'Dispatched')} style={{ background: '#10b981', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}>
+              Confirm & Dispatch Trip
+            </button>
+            <button onClick={(e) => handleSubmit(e, 'Draft')} style={{ background: '#1b4965', color: '#fff', padding: '12px 20px', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+              Save as Draft
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

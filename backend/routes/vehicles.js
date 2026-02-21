@@ -30,4 +30,22 @@ router.post('/', async (req, res) => {
     }
 });
 
+// PUT: Toggle Vehicle Status (Retire / Reactivate)
+router.put('/:id/retire', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // We will pass 'Retired' or 'Available' from the frontend
+        
+        await db.query(
+            'UPDATE vehicles SET status = $1 WHERE id = $2',
+            [status, id]
+        );
+        
+        res.json({ message: `Vehicle marked as ${status}.` });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: 'Server error updating vehicle status.' });
+    }
+});
+
 module.exports = router;

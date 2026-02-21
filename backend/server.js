@@ -16,6 +16,7 @@ const maintenanceRoutes = require('./routes/maintenance');
 const fuelRoutes = require('./routes/fuel');
 const analyticsRoutes = require('./routes/analytics');
 const authRoutes = require('./routes/auth');
+const expenseRoutes = require('./routes/expenses');
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/trips', tripRoutes);
@@ -23,6 +24,7 @@ app.use('/api/maintenance', maintenanceRoutes);
 app.use('/api/fuel', fuelRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/expenses', expenseRoutes);
 // ----------------------------------
 
 app.get('/api/health', async (req, res) => {
