@@ -8,7 +8,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// A test route to check our database connection
+// --- NEW: Import and use routes ---
+const vehicleRoutes = require('./routes/vehicles');
+const driverRoutes = require('./routes/drivers');
+const tripRoutes = require('./routes/trips');
+const maintenanceRoutes = require('./routes/maintenance');
+const fuelRoutes = require('./routes/fuel');
+const analyticsRoutes = require('./routes/analytics');
+const authRoutes = require('./routes/auth');
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/drivers', driverRoutes);
+app.use('/api/trips', tripRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/fuel', fuelRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/auth', authRoutes);
+// ----------------------------------
+
 app.get('/api/health', async (req, res) => {
     try {
         const result = await db.query('SELECT NOW()');
@@ -18,6 +34,8 @@ app.get('/api/health', async (req, res) => {
         res.status(500).send('Database connection error');
     }
 });
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

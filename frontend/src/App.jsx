@@ -1,35 +1,105 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import VehicleRegistry from './pages/VehicleRegistry';
+import DriverProfiles from './pages/DriverProfiles';
+import TripDispatcher from './pages/TripDispatcher';
+import MaintenanceLogs from './pages/MaintenanceLogs';
+import TripAndFuelLogging from './pages/TripAndFuelLogging';
+import OperationalAnalytics from './pages/OperationalAnalytics';
 
-function App() {
-  const [count, setCount] = useState(0)
+function Sidebar({ role, onLogout }) {
+  const location = useLocation();
+  
+  // ROLE-BASED ACCESS CONTROL (RBAC): Determine which links this role can see
+  const allLinks = [
+    { path: '/', label: 'Dashboard', roles: ['Manager'] }, // Manager only
+    { path: '/dispatch', label: 'Trip Dispatcher', roles: ['Manager', 'Dispatcher'] }, // Both
+    { path: '/vehicles', label: 'Vehicle Registry', roles: ['Manager', 'Dispatcher'] }, // Both
+    { path: '/drivers', label: 'Driver Profiles', roles: ['Manager', 'Dispatcher'] }, // Both (Dispatchers need to see who is on duty)
+    { path: '/maintenance', label: 'Service Logs', roles: ['Manager'] }, // Manager only
+    { path: '/fuel-and-completion', label: 'Trip Logs & Fuel', roles: ['Manager', 'Dispatcher'] } // Both (Dispatchers complete trips, Managers log fuel)
+  ];
+
+  // Filter links based on the user's role
+  const visibleLinks = allLinks.filter(link => link.roles.includes(role));
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <nav style={{ width: '260px', background: '#0a111c', borderRight: '1px solid #1b4965', padding: '30px 20px', display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <h2 style={{ color: '#00a8e8', marginBottom: '5px', letterSpacing: '1px' }}>FleetFlow</h2>
+      <p style={{ color: '#8d99ae', fontSize: '12px', marginBottom: '40px', textTransform: 'uppercase' }}>Role: {role}</p>
+      
+      <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '15px', flex: 1 }}>
+        {visibleLinks.map(link => {
+          const isActive = location.pathname === link.path || (link.path === '/' && location.pathname === '/analytics');
+          return (
+            <li key={link.path}>
+              <Link to={link.path} style={{ 
+                  textDecoration: 'none', display: 'block', padding: '12px 15px', borderRadius: '6px',
+                  color: isActive ? '#fff' : '#8d99ae', background: isActive ? '#0077b6' : 'transparent',
+                  transition: '0.2s', fontWeight: isActive ? '600' : '400'
+                }}>
+                {link.label}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+
+      <button onClick={onLogout} style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', padding: '10px', borderRadius: '4px', cursor: 'pointer', marginTop: 'auto' }}>
+        Log Out
+      </button>
+    </nav>
+  );
 }
 
-export default App
+export default function App() {
+  const [auth, setAuth] = useState({ isAuthenticated: false, role: null });
+
+  // Check if already logged in on page load
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    if (token && role) {
+      setAuth({ isAuthenticated: true, role });
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    setAuth({ isAuthenticated: false, role: null });
+  };
+
+  // If not authenticated, ONLY render the Login page
+  if (!auth.isAuthenticated) {
+    return <Login setAuth={setAuth} />;
+  }
+
+  // If authenticated, render the full app structure
+  return (
+    <Router>
+      <div style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
+        <Sidebar role={auth.role} onLogout={handleLogout} />
+        <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+          <Routes>
+            <Route path="/" element={auth.role === 'Dispatcher' ? <Navigate to="/dispatch" /> : <OperationalAnalytics />} />
+            <Route path="/vehicles" element={<VehicleRegistry />} />
+            <Route path="/drivers" element={<DriverProfiles />} />
+            <Route path="/dispatch" element={<TripDispatcher />} />
+            <Route path="/maintenance" element={<MaintenanceLogs />} />
+            <Route path="/fuel-and-completion" element={<TripAndFuelLogging />} />
+            {/* Add this as the very last Route in your App.jsx */}
+            <Route path="*" element={
+              <div style={{ textAlign: 'center', marginTop: '100px', color: '#8d99ae' }}>
+                <h1 style={{ color: '#00a8e8', fontSize: '4rem', margin: 0 }}>404</h1>
+                <h2>Route Not Found</h2>
+                <p>The page you are looking for has been moved or doesn't exist.</p>
+              </div>
+            } />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
+}
