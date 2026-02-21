@@ -12,17 +12,16 @@ import CommandCenter from './pages/CommandCenter';
 function Sidebar({ role, onLogout }) {
   const location = useLocation();
   
-  // ROLE-BASED ACCESS CONTROL (RBAC): Determine which links this role can see
-const allLinks = [
-  { path: '/', label: 'Command Center', roles: ['Manager', 'Dispatcher'] },
-  { path: '/dispatch', label: 'Trip Dispatcher', roles: ['Manager', 'Dispatcher'] },
-  { path: '/vehicles', label: 'Vehicle Registry', roles: ['Manager', 'Dispatcher'] },
-  { path: '/drivers', label: 'Driver Profiles', roles: ['Manager', 'Dispatcher'] },
-  { path: '/maintenance', label: 'Service Logs', roles: ['Manager'] },
-  { path: '/fuel-and-completion', label: 'Trip Logs & Fuel', roles: ['Manager', 'Dispatcher'] },
-  { path: '/analytics', label: 'Operational Analytics & Financial Reports', roles: ['Manager'] },
-
-];
+// ROLE-BASED ACCESS CONTROL (RBAC): Determine which links this role can see
+  const allLinks = [
+    { path: '/', label: 'Command Center', roles: ['Manager'] }, // Restrict to Manager only
+    { path: '/dispatch', label: 'Trip Dispatcher', roles: ['Manager', 'Dispatcher'] },
+    { path: '/vehicles', label: 'Vehicle Registry', roles: ['Manager', 'Dispatcher'] },
+    { path: '/drivers', label: 'Driver Profiles', roles: ['Manager', 'Dispatcher'] },
+    { path: '/maintenance', label: 'Service Logs', roles: ['Manager'] },
+    { path: '/fuel-and-completion', label: 'Trip Logs & Fuel', roles: ['Manager', 'Dispatcher'] },
+    { path: '/analytics', label: 'Operational Analytics & Financial Reports', roles: ['Manager'] },
+  ];
 
   // Filter links based on the user's role
   const visibleLinks = allLinks.filter(link => link.roles.includes(role));
